@@ -686,6 +686,16 @@ vip(gam_fit)
 
 ![](midterm_files/figure-gfm/unnamed-chunk-7-2.png)<!-- -->
 
+``` r
+# for model comparison
+set.seed(1)
+gam_fit_1= train(x[rowtr,],
+                y[rowtr],
+                   method = "gam",
+                   metric = "Accuracy",
+                   trControl = ctrl_2)
+```
+
 ### MARS
 
 ``` r
@@ -829,6 +839,18 @@ mars_fit$finalModel
     ## Number of terms at each degree of interaction: 1 4 (additive model)
     ## Earth GCV 0.1765461    RSS 35.9338    GRSq 0.1958626    RSq 0.266058
 
+``` r
+# for model comparison
+set.seed(1)
+mars_fit_1 = train(x[rowtr,], 
+                 y[rowtr],
+                 method = "earth",
+                 metric = "Accuracy", 
+                 tuneGrid = expand.grid(degree = 1:3, 
+                                        nprune = 2:30), 
+                 trControl = ctrl_2)
+```
+
 pdp plot
 
 ``` r
@@ -943,6 +965,16 @@ plot(lda_fit2)
 
 ![](midterm_files/figure-gfm/unnamed-chunk-10-2.png)<!-- -->
 
+``` r
+# for model comparison
+set.seed(1)
+
+lda_fit_1 = train(x[rowtr, ], y[rowtr], 
+                method = "lda", 
+                metric = "Accuracy", 
+                trControl = ctrl_2)
+```
+
 ### Naive Bayes
 
 ``` r
@@ -1022,6 +1054,16 @@ plot(smooth(nb_roc), col = 4 , add = T)
 ```
 
 ![](midterm_files/figure-gfm/unnamed-chunk-11-2.png)<!-- -->
+
+``` r
+# for model comparison
+set.seed(1)
+nb_fit_1 = train(x[rowtr, ], y[rowtr], 
+               method = "nb", 
+               tuneGrid = nbgrid,
+               metric = "Accuracy", 
+               trControl = ctrl_2)
+```
 
 ### Random Forest
 
@@ -1109,6 +1151,19 @@ plot(smooth(rf_roc), col = 4 , add = T)
 ```
 
 ![](midterm_files/figure-gfm/unnamed-chunk-12-2.png)<!-- -->
+
+``` r
+# for model comparison
+
+set.seed(1)
+rf.fit_1 = train(death_event~., 
+               heart, 
+               subset = rowtr, 
+               method = "ranger", 
+               tuneGrid = rf.grid, 
+               metric = "Accuracy", 
+               trControl = ctrl_2)
+```
 
 ### AdaBoost
 
@@ -1206,6 +1261,20 @@ plot(smooth(gbm_roc), col = 4 , add = T)
 ```
 
 ![](midterm_files/figure-gfm/unnamed-chunk-13-2.png)<!-- -->
+
+``` r
+# model comparison
+set.seed(1)
+gbm.fit_1 = train(death_event~., 
+                heart, 
+                subset = rowtr, 
+                tuneGrid = gbm.grid, 
+                trControl = ctrl_2, 
+                method = "gbm", 
+                distribution = "adaboost", 
+                metric = "Accuracy", 
+                verbose = F)
+```
 
 ### SVM
 
@@ -1347,13 +1416,20 @@ confusionMatrix(svmr.pred, heart$death_event[-rowtr])
 ### Model Comparison
 
 ``` r
-res = resamples(list(glm = logit_fit, glmnet = glmnet_fit, gam = gam_fit, mars = mars_fit, lda = lda_fit, naive_bayes = nb_fit, rf = rf.fit, gbm = gbm.fit))
-summary(res)
+res_roc = resamples(list(glm = logit_fit, 
+                         glmnet = glmnet_fit, 
+                         gam = gam_fit, 
+                         mars = mars_fit, 
+                         lda = lda_fit, 
+                         naive_bayes = nb_fit, 
+                         rf = rf.fit, 
+                         gbm = gbm.fit))
+summary(res_roc)
 ```
 
     ## 
     ## Call:
-    ## summary.resamples(object = res)
+    ## summary.resamples(object = res_roc)
     ## 
     ## Models: glm, glmnet, gam, mars, lda, naive_bayes, rf, gbm 
     ## Number of resamples: 10 
@@ -1392,13 +1468,22 @@ summary(res)
     ## gbm         0.0000000 0.1428571 0.2142857 0.2625000 0.3928571 0.5714286    0
 
 ``` r
-bwplot(res, metric = "ROC")
+bwplot(res_roc, metric = "ROC")
 ```
 
 ![](midterm_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 
 ``` r
-res = resamples(list(glm = logit_fit_1, svml = svml_fit, svmr = svmr.fit))
+res = resamples(list(glm = logit_fit_1, 
+                     glmnet = glmnet_fit_2, 
+                     gam = gam_fit_1, 
+                     mars = mars_fit_1, 
+                     lda = lda_fit_1, 
+                     nb = nb_fit_1, 
+                     rf = rf.fit_1, 
+                     gbm = gbm.fit_1, 
+                     svml = svml_fit, 
+                     svmr = svmr.fit))
 summary(res)
 ```
 
@@ -1406,20 +1491,93 @@ summary(res)
     ## Call:
     ## summary.resamples(object = res)
     ## 
-    ## Models: glm, svml, svmr 
+    ## Models: glm, glmnet, gam, mars, lda, nb, rf, gbm, svml, svmr 
     ## Number of resamples: 10 
     ## 
     ## Accuracy 
-    ##           Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
-    ## glm  0.6086957 0.6988225 0.7272727 0.7206357 0.7361660 0.8181818    0
-    ## svml 0.6521739 0.7130682 0.7332016 0.7338768 0.7643281 0.8181818    0
-    ## svmr 0.6363636 0.6988225 0.7332016 0.7429677 0.8068182 0.8181818    0
+    ##             Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+    ## glm    0.6086957 0.6988225 0.7272727 0.7206357 0.7361660 0.8181818    0
+    ## glmnet 0.6818182 0.6988225 0.7559289 0.7380270 0.7727273 0.7826087    0
+    ## gam    0.6521739 0.6852767 0.7405303 0.7293314 0.7727273 0.7826087    0
+    ## mars   0.6818182 0.7302372 0.7559289 0.7601943 0.7869318 0.8636364    0
+    ## lda    0.6086957 0.6852767 0.7332016 0.7248024 0.7670455 0.8181818    0
+    ## nb     0.6818182 0.7272727 0.7332016 0.7423913 0.7472826 0.8181818    0
+    ## rf     0.6250000 0.6818182 0.7114625 0.7302866 0.7984190 0.8636364    0
+    ## gbm    0.6363636 0.6709486 0.7332016 0.7240283 0.7643281 0.8181818    0
+    ## svml   0.6521739 0.7130682 0.7332016 0.7338768 0.7643281 0.8181818    0
+    ## svmr   0.6363636 0.6988225 0.7332016 0.7429677 0.8068182 0.8181818    0
     ## 
     ## Kappa 
-    ##             Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
-    ## glm   0.17204301 0.2016796 0.2807286 0.2983365 0.3526242 0.5463918    0
-    ## svml  0.17204301 0.2695778 0.3210841 0.3212596 0.3472302 0.5056180    0
-    ## svmr -0.08641975 0.2529788 0.3128055 0.3121639 0.4930749 0.5056180    0
+    ##               Min.   1st Qu.    Median      Mean   3rd Qu.      Max. NA's
+    ## glm     0.17204301 0.2016796 0.2807286 0.2983365 0.3526242 0.5463918    0
+    ## glmnet  0.09411765 0.3045259 0.3377609 0.3140115 0.3946869 0.4162437    0
+    ## gam     0.09411765 0.1875871 0.3861193 0.3254152 0.4456451 0.4954128    0
+    ## mars    0.17204301 0.3222150 0.3509989 0.4064995 0.5112414 0.6972477    0
+    ## lda     0.09411765 0.1777704 0.2770965 0.2981934 0.4086022 0.5463918    0
+    ## nb      0.09411765 0.2034956 0.2927725 0.3103809 0.4153892 0.5056180    0
+    ## rf      0.13207547 0.1744868 0.2205840 0.3201750 0.4923181 0.6451613    0
+    ## gbm    -0.08641975 0.0462963 0.1867102 0.2033815 0.3311952 0.5463918    0
+    ## svml    0.17204301 0.2695778 0.3210841 0.3212596 0.3472302 0.5056180    0
+    ## svmr   -0.08641975 0.2529788 0.3128055 0.3121639 0.4930749 0.5056180    0
+
+``` r
+bwplot(res, metric = "Accuracy")
+```
+
+![](midterm_files/figure-gfm/unnamed-chunk-16-2.png)<!-- -->
+
+### Feature importance
+
+``` r
+# MARS feature importance
+set.seed(1)
+vip(mars_fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    nsim = 10,
+    metric = "accuracy",
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+```
+
+![](midterm_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+
+``` r
+# random forest feature importance
+set.seed(1)
+vip(rf.fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    metric = "accuracy",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+```
+
+![](midterm_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
+
+``` r
+# svmr feature importance
+set.seed(1)
+vip(svmr.fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    metric = "accuracy",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+```
+
+![](midterm_files/figure-gfm/unnamed-chunk-17-3.png)<!-- -->
 
 ## Logistic Regression on different follow-up time
 
@@ -1515,7 +1673,7 @@ summary(logit_fit_tm)
 vip(logit_fit_tm)
 ```
 
-![](midterm_files/figure-gfm/unnamed-chunk-17-1.png)<!-- -->
+![](midterm_files/figure-gfm/unnamed-chunk-18-1.png)<!-- -->
 
 ``` r
 # follow-up time ~ >100 days - group 2
@@ -1583,4 +1741,4 @@ summary(logit_fit_tm2)
 vip(logit_fit_tm2)
 ```
 
-![](midterm_files/figure-gfm/unnamed-chunk-17-2.png)<!-- -->
+![](midterm_files/figure-gfm/unnamed-chunk-18-2.png)<!-- -->

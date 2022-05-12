@@ -354,6 +354,14 @@ confusionMatrix(data = as.factor(gam_pred),
 vip(gam_fit)
 
 
+# for model comparison
+set.seed(1)
+gam_fit_1= train(x[rowtr,],
+                y[rowtr],
+                   method = "gam",
+                   metric = "Accuracy",
+                   trControl = ctrl_2)
+
 
 ```
 
@@ -392,6 +400,16 @@ plot(smooth(mars_roc), col = 4 , add = T)
 vip(mars_fit$finalModel)
 
 mars_fit$finalModel
+
+# for model comparison
+set.seed(1)
+mars_fit_1 = train(x[rowtr,], 
+                 y[rowtr],
+                 method = "earth",
+                 metric = "Accuracy", 
+                 tuneGrid = expand.grid(degree = 1:3, 
+                                        nprune = 2:30), 
+                 trControl = ctrl_2)
 
 ```
 
@@ -442,6 +460,13 @@ lda_fit2 = lda(death_event~., data = heart,
                subset = rowtr)
 plot(lda_fit2)
 
+# for model comparison
+set.seed(1)
+
+lda_fit_1 = train(x[rowtr, ], y[rowtr], 
+                method = "lda", 
+                metric = "Accuracy", 
+                trControl = ctrl_2)
 ```
 
 ### Naive Bayes
@@ -474,6 +499,13 @@ nb_roc = roc(y[-rowtr], nb_pred_prob)
 plot(nb_roc, legacy.axes = T, print.auc = T)
 plot(smooth(nb_roc), col = 4 , add = T)
 
+# for model comparison
+set.seed(1)
+nb_fit_1 = train(x[rowtr, ], y[rowtr], 
+               method = "nb", 
+               tuneGrid = nbgrid,
+               metric = "Accuracy", 
+               trControl = ctrl_2)
 ```
 
 ### Random Forest
@@ -507,6 +539,17 @@ confusionMatrix(data = as.factor(rf_pred),
 rf_roc = roc(y[-rowtr], rf_pred_prob)
 plot(rf_roc, legacy.axes = T, print.auc = T)
 plot(smooth(rf_roc), col = 4 , add = T)
+
+# for model comparison
+
+set.seed(1)
+rf.fit_1 = train(death_event~., 
+               heart, 
+               subset = rowtr, 
+               method = "ranger", 
+               tuneGrid = rf.grid, 
+               metric = "Accuracy", 
+               trControl = ctrl_2)
 ```
 
 
@@ -548,6 +591,18 @@ gbm.fit$bestTune
 gbm_roc = roc(y[-rowtr], gbm_pred_prob)
 plot(gbm_roc, legacy.axes = T, print.auc = T)
 plot(smooth(gbm_roc), col = 4 , add = T)
+
+# model comparison
+set.seed(1)
+gbm.fit_1 = train(death_event~., 
+                heart, 
+                subset = rowtr, 
+                tuneGrid = gbm.grid, 
+                trControl = ctrl_2, 
+                method = "gbm", 
+                distribution = "adaboost", 
+                metric = "Accuracy", 
+                verbose = F)
 ```
 
 
@@ -572,6 +627,8 @@ svml_fit$bestTune
 svml.pred = predict(svml_fit, newdata = heart[-rowtr,])
 
 confusionMatrix(svml.pred, heart$death_event[-rowtr])
+
+
 ```
 
 
@@ -606,15 +663,77 @@ confusionMatrix(svmr.pred, heart$death_event[-rowtr])
 
 ### Model Comparison
 ```{r,warning=FALSE}
-res = resamples(list(glm = logit_fit, glmnet = glmnet_fit, gam = gam_fit, mars = mars_fit, lda = lda_fit, naive_bayes = nb_fit, rf = rf.fit, gbm = gbm.fit))
+res_roc = resamples(list(glm = logit_fit, 
+                         glmnet = glmnet_fit, 
+                         gam = gam_fit, 
+                         mars = mars_fit, 
+                         lda = lda_fit, 
+                         naive_bayes = nb_fit, 
+                         rf = rf.fit, 
+                         gbm = gbm.fit))
+summary(res_roc)
+bwplot(res_roc, metric = "ROC")
+
+
+
+res = resamples(list(glm = logit_fit_1, 
+                     glmnet = glmnet_fit_2, 
+                     gam = gam_fit_1, 
+                     mars = mars_fit_1, 
+                     lda = lda_fit_1, 
+                     nb = nb_fit_1, 
+                     rf = rf.fit_1, 
+                     gbm = gbm.fit_1, 
+                     svml = svml_fit, 
+                     svmr = svmr.fit))
 summary(res)
-bwplot(res, metric = "ROC")
-
-
-
-res = resamples(list(glm = logit_fit_1, svml = svml_fit, svmr = svmr.fit))
-summary(res)
+bwplot(res, metric = "Accuracy")
 ```
+
+
+
+### Feature importance
+```{r}
+# MARS feature importance
+set.seed(1)
+vip(mars_fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    nsim = 10,
+    metric = "accuracy",
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+
+# random forest feature importance
+set.seed(1)
+vip(rf.fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    metric = "accuracy",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+
+# svmr feature importance
+set.seed(1)
+vip(svmr.fit, 
+    method = "permute", 
+    train = heart[rowtr, ],
+    target = "death_event",
+    metric = "accuracy",
+    nsim = 10,
+    pred_wrapper = predict,
+    geom = "boxplot", 
+    all_permutations = TRUE,
+    mapping = aes_string(fill = "Variable")) 
+```
+
 
 ## Logistic Regression on different follow-up time
 ```{r}
